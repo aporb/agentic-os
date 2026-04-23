@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agentic OS — Command Center</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --border: #262626;
+    --text: #e5e5e5;
+    --text-dim: #737373;
+    --accent: #3b82f6;
+    --accent-dim: #1d4ed8;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 20px; font-weight: 600; }
+  header .date { color: var(--text-dim); font-size: 14px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .pack {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .pack h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pack h2 .icon { font-size: 18px; }
+  .skill-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 14px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .skill-btn:hover { border-color: var(--accent); background: #0f172a; }
+  .skill-btn .name { font-weight: 500; }
+  .skill-btn .desc { color: var(--text-dim); font-size: 12px; margin-top: 4px; }
+  .status-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 24px;
+  }
+  .stat .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
+  .stat .value { font-size: 24px; font-weight: 600; margin-top: 4px; }
+  .stat .value.green { color: var(--success); }
+  .stat .value.yellow { color: var(--warning); }
+  .stat .value.blue { color: var(--accent); }
+  .output-area {
+    max-width: 1200px;
+    margin: 24px auto 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: none;
+  }
+  .output-area.visible { display: block; }
+  .output-area h3 { font-size: 14px; color: var(--text-dim); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .output-area pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    color: var(--text);
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .prompt-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    margin-bottom: 12px;
+    resize: vertical;
+    min-height: 60px;
+  }
+  .prompt-input:focus { outline: none; border-color: var(--accent); }
+  .run-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .run-btn:hover { background: var(--accent-dim); }
+  .footer {
+    max-width: 1200px;
+    margin: 32px auto 0;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Agentic OS</h1>
+  <div class="date" id="currentDate"></div>
+</header>
+
+<div class="status-bar">
+  <div class="stat">
+    <div class="label">Sources</div>
+    <div class="value blue" id="sourceCount">—</div>
+  </div>
+  <div class="stat">
+    <div class="label">Wiki Pages</div>
+    <div class="value blue" id="wikiCount">—</div>
+  </div>
+  <div class="stat">
+    <div class="label">Skills</div>
+    <div class="value green" id="skillCount">—</div>
+  </div>
+  <div class="stat">
+    <div class="label">Automations</div>
+    <div class="value yellow" id="autoCount">—</div>
+  </div>
+</div>
+
+<div class="grid" id="skillGrid">
+
+  <div class="pack">
+    <h2><span class="icon">🔍</span> Market Intel</h2>
+    <button class="skill-btn" onclick="loadSkill('market-intel/competitor-research')">
+      <div class="name">Competitor Research</div>
+      <div class="desc">One-page intel brief on any company or product</div>
+    </button>
+    <button class="skill-btn" onclick="loadSkill('market-intel/industry-trends')">
+      <div class="name">Industry Trends</div>
+      <div class="desc">Scan for shifts and emerging patterns in your market</div>
+    </button>
+  </div>
+
+  <div class="pack">
+    <h2><span class="icon">✍️</span> Content Engine</h2>
+    <button class="skill-btn" onclick="loadSkill('content-engine/blog-post')">
+      <div class="name">Blog Post</div>
+      <div class="desc">Draft a blog post from your knowledge base</div>
+    </button>
+    <button class="skill-btn" onclick="loadSkill('content-engine/social-content')">
+      <div class="name">Social Content</div>
+      <div class="desc">Twitter, LinkedIn, or thread — 3 versions, pick your favorite</div>
+    </button>
+    <button class="skill-btn" onclick="loadSkill('content-engine/newsletter')">
+      <div class="name">Newsletter</div>
+      <div class="desc">Draft a newsletter issue — curated or original</div>
+    </button>
+  </div>
+
+  <div class="pack">
+    <h2><span class="icon">💰</span> Sales Engine</h2>
+    <button class="skill-btn" onclick="loadSkill('sales-engine/prospect-research')">
+      <div class="name">Prospect Research</div>
+      <div class="desc">Research a potential customer before reaching out</div>
+    </button>
+    <button class="skill-btn" onclick="loadSkill('sales-engine/outreach-email')">
+      <div class="name">Outreach Email</div>
+      <div class="desc">Cold or warm outreach that gets replies</div>
+    </button>
+    <button class="skill-btn" onclick="loadSkill('sales-engine/pitch-deck-section')">
+      <div class="name">Pitch Deck Section</div>
+      <div class="desc">Draft or improve a section of your pitch deck</div>
+    </button>
+  </div>
+
+  <div class="pack">
+    <h2><span class="icon">⚙️</span> Operations</h2>
+    <button class="skill-btn" onclick="loadSkill('operations/daily-standup')">
+      <div class="name">Daily Standup</div>
+      <div class="desc">Morning briefing — what's on deck, what's blocked</div>
+    </button>
+    <button class="skill-btn" onclick="loadSkill('operations/weekly-review')">
+      <div class="name">Weekly Review</div>
+      <div class="desc">What shipped, what didn't, what changes next week</div>
+    </button>
+    <button class="skill-btn" onclick="loadSkill('operations/meeting-prep')">
+      <div class="name">Meeting Prep</div>
+      <div class="desc">Everything you know about a person or company, one page</div>
+    </button>
+    <button class="skill-btn" onclick="loadSkill('operations/financial-tracker')">
+      <div class="name">Financial Tracker</div>
+      <div class="desc">Log income/expenses, check runway</div>
+    </button>
+  </div>
+
+</div>
+
+<div class="output-area" id="outputArea">
+  <h3 id="outputTitle">Skill Output</h3>
+  <textarea class="prompt-input" id="promptInput" placeholder="Describe what you need — e.g., 'Research Acme Corp' or 'Write a blog post about pricing strategy'"></textarea>
+  <button class="run-btn" onclick="generatePrompt()">Copy Prompt for Agent</button>
+  <pre id="outputContent" style="display:none"></pre>
+</div>
+
+<div class="footer">
+  Agentic OS — <a href="https://github.com/aporb/agentic-os">View on GitHub</a>
+</div>
+
+<script>
+  // Set current date
+  const now = new Date();
+  document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  // Count stats (approximate — reads from the skill definitions below)
+  const skills = {
+    'market-intel/competitor-research': {
+      name: 'Competitor Research',
+      prompt: 'Run the competitor-research skill. Company: [ENTER COMPANY NAME]. Focus: all.'
+    },
+    'market-intel/industry-trends': {
+      name: 'Industry Trends',
+      prompt: 'Run the industry-trends skill. Industry: [ENTER INDUSTRY]. Timeframe: 1month.'
+    },
+    'content-engine/blog-post': {
+      name: 'Blog Post',
+      prompt: 'Run the blog-post skill. Topic: [ENTER TOPIC]. Audience: founders. Length: 1000.'
+    },
+    'content-engine/social-content': {
+      name: 'Social Content',
+      prompt: 'Run the social-content skill. Idea: [ENTER YOUR IDEA]. Platform: twitter.'
+    },
+    'content-engine/newsletter': {
+      name: 'Newsletter',
+      prompt: 'Run the newsletter skill. Theme: [ENTER THEME]. Format: mixed.'
+    },
+    'sales-engine/prospect-research': {
+      name: 'Prospect Research',
+      prompt: 'Run the prospect-research skill. Company: [ENTER COMPANY NAME].'
+    },
+    'sales-engine/outreach-email': {
+      name: 'Outreach Email',
+      prompt: 'Run the outreach-email skill. Prospect: [ENTER NAME/COMPANY]. Goal: meeting.'
+    },
+    'sales-engine/pitch-deck-section': {
+      name: 'Pitch Deck Section',
+      prompt: 'Run the pitch-deck-section skill. Section: [ENTER SECTION NAME].'
+    },
+    'operations/daily-standup': {
+      name: 'Daily Standup',
+      prompt: 'Run the daily-standup skill.'
+    },
+    'operations/weekly-review': {
+      name: 'Weekly Review',
+      prompt: 'Run the weekly-review skill.'
+    },
+    'operations/meeting-prep': {
+      name: 'Meeting Prep',
+      prompt: 'Run the meeting-prep skill. Person or company: [ENTER NAME].'
+    },
+    'operations/financial-tracker': {
+      name: 'Financial Tracker',
+      prompt: 'Run the financial-tracker skill. Action: report.'
+    }
+  };
+
+  document.getElementById('skillCount').textContent = Object.keys(skills).length;
+  document.getElementById('autoCount').textContent = '1';
+  document.getElementById('sourceCount').textContent = '0';
+  document.getElementById('wikiCount').textContent = '0';
+
+  function loadSkill(skillId) {
+    const skill = skills[skillId];
+    if (!skill) return;
+    const area = document.getElementById('outputArea');
+    area.classList.add('visible');
+    document.getElementById('outputTitle').textContent = skill.name;
+    document.getElementById('promptInput').value = skill.prompt;
+    document.getElementById('outputContent').style.display = 'none';
+    document.getElementById('promptInput').focus();
+  }
+
+  function generatePrompt() {
+    const prompt = document.getElementById('promptInput').value;
+    if (!prompt) return;
+    navigator.clipboard.writeText(prompt).then(() => {
+      const btn = document.querySelector('.run-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy Prompt for Agent'; }, 2000);
+    }).catch(() => {
+      // Fallback for file:// protocol
+      const output = document.getElementById('outputContent');
+      output.style.display = 'block';
+      output.textContent = 'Copy this prompt:\n\n' + prompt;
+    });
+  }
+</script>
+
+</body>
+</html>

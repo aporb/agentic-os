@@ -1,0 +1,44 @@
+# Second Brain Starter Template
+
+> A persistent, interlinked markdown knowledge base that you and your AI agent build together.
+
+## What Is This?
+
+An Obsidian vault + GitHub repo template. Clone it, open in Obsidian, connect your AI agent, and start building a living knowledge base — an LLM Wiki.
+
+## Architecture
+
+Four zones:
+
+| Zone | Path | Purpose |
+|------|------|---------|
+| Sources | `/sources/` | Raw materials — articles, papers, transcripts. Immutable. |
+| Wiki | `/wiki/` | Synthesized knowledge — the agent writes, you review. |
+| Journal | `/journal/` | Your thinking — daily notes, reflections. |
+| Schema | `/schema/` | Rules — tags, templates, agent protocol. |
+
+## Quick Start
+
+1. Clone this repo
+2. Open the folder in Obsidian
+3. Point your AI agent at the vault
+4. Drop sources into `/sources/`, run `/ingest`, review wiki pages
+
+## Agent Instructions
+
+- `CLAUDE.md` — Claude Code
+- `AGENTS.md` — Any agent
+- `.cursorrules` — Cursor
+- `copilot-instructions.md` — GitHub Copilot
+
+All point to `/schema/agent-protocol.md` as the single source of truth.
+
+## Slash Commands (Claude Code)
+
+`/ingest` `/ask` `/research` `/daily` `/sync` `/status` `/expand`
+
+## Links
+
+- Full docs: `/README.md`
+- Agent protocol: `/schema/agent-protocol.md`
+- Tag taxonomy: `/schema/tags.md`

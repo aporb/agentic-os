@@ -1,0 +1,143 @@
+# Second Brain Starter Template — Full Reference
+
+## What This Is
+
+A self-contained Obsidian vault that doubles as a GitHub repository. It implements the "LLM Wiki" pattern — a persistent, interlinked markdown knowledge base that an AI agent builds and maintains alongside a human.
+
+The vault is agent-agnostic. It works with Claude Code, OpenAI Codex, OpenCode, Cursor, GitHub Copilot, or any agent that can read markdown and follow instructions.
+
+## Architecture
+
+The vault has four zones, each with distinct ownership and access rules:
+
+| Zone | Path | Owner | Agent Access |
+|------|------|-------|-------------|
+| Sources | `/sources/` | Human curates, agent ingests | Read only |
+| Wiki | `/wiki/` | Agent writes, human reviews | Read + write |
+| Journal | `/journal/` | Human writes, agent reads | Read only |
+| Schema | `/schema/` | Human sets rules, agent follows | Read only |
+
+### Sources (`/sources/`)
+
+Raw materials — articles, papers, transcripts, screenshots, exported data. The agent reads them but never modifies them. Each source has frontmatter tracking its processing status: `unread → reading → processed`.
+
+### Wiki (`/wiki/`)
+
+Synthesized knowledge — the agent's domain. The agent creates pages by reading sources, connecting ideas, and writing summaries. Pages have a status lifecycle: `draft → reviewed → stable`. Once a page is `reviewed` or `stable`, the agent cannot modify it without explicit human instruction.
+
+A special page, `/wiki/contradictions.md`, tracks conflicting information across sources. The agent flags contradictions here instead of silently resolving them.
+
+### Journal (`/journal/`)
+
+The human's thinking space. Daily notes, reflections, decisions. The agent reads these for context but never modifies them. The `/daily` command creates a scaffold that the human then owns.
+
+### Schema (`/schema/`)
+
+The rules of the vault. Tag taxonomy, page templates, and the agent operating protocol. The agent follows these rules without exception. Only the human modifies schema files.
+
+## Frontmatter
+
+Every page in `/sources/` and `/wiki/` must include YAML frontmatter:
+
+- `type`: source | wiki | journal
+- `title`: descriptive title
+- `created` / `updated`: YYYY-MM-DD
+- `status`: lifecycle status (varies by zone)
+- `sources`: (wiki only) references to source files
+- `tags`: from the taxonomy in `/schema/tags.md`
+
+## Status Lifecycle
+
+Sources: `unread → reading → processed`
+Wiki: `draft → reviewed → stable`
+
+The agent never changes a wiki page from `reviewed` or `stable` back to `draft`. Only the human can downgrade status.
+
+## Contradictions
+
+When sources disagree, the agent does not silently resolve the conflict. It flags the contradiction in `/wiki/contradictions.md` with the conflicting claims, their sources, and a suggested resolution. The human decides.
+
+## Git Workflow
+
+- Commit after each meaningful unit of work
+- Commit message format: `ingest: source-name`, `wiki: page-name`, `journal: YYYY-MM-DD`, `schema: update-tag-taxonomy`
+- For solo use: commit to `main`
+- For collaborative use: branch per session, merge after review
+- `/sync` command or `scripts/sync.sh` handles pull-add-commit-push
+
+## Slash Commands (Claude Code)
+
+| Command | File | What It Does |
+|---------|------|-------------|
+| `/ingest` | `.claude/commands/ingest.md` | Read a source, create wiki pages, cross-reference |
+| `/ask` | `.claude/commands/ask.md` | Query the wiki using existing synthesized knowledge |
+| `/research` | `.claude/commands/research.md` | Research a topic, ingest sources, build wiki pages |
+| `/daily` | `.claude/commands/daily.md` | Create or update today's journal entry scaffold |
+| `/sync` | `.claude/commands/sync.md` | Git pull, add, commit, push |
+| `/status` | `.claude/commands/status.md` | Show vault health (unprocessed sources, stale pages, contradictions) |
+| `/expand` | `.claude/commands/expand.md` | Take a wiki page and deepen it from sources |
+
+## Agent Instruction Files
+
+| File | Agent | Purpose |
+|------|-------|---------|
+| `CLAUDE.md` | Claude Code | Claude-specific instructions + slash commands |
+| `AGENTS.md` | Any agent | Agent-agnostic operating guide |
+| `.cursorrules` | Cursor | Cursor-specific rules |
+| `copilot-instructions.md` | GitHub Copilot | Copilot-specific instructions |
+
+All four files point to `/schema/agent-protocol.md` as the single source of truth for operating rules.
+
+## What This Is Not
+
+- Not a plugin collection — zero plugins required, Obsidian works out of the box
+- Not a sync solution — bring your own git workflow
+- Not a database — pure markdown + git
+- Not opinionated about which agent you use — any agent that reads markdown works
+
+## Tag Taxonomy
+
+Defined in `/schema/tags.md`. Four categories: Domain, Process, Status, Format. The agent uses only these tags. New tags require human approval.
+
+## Templates
+
+Defined in `/schema/templates.md`. Three wiki templates: Concept Page, Entity Page, Source Index. The agent copies these when creating new pages.
+
+## Directory Structure
+
+```
+/
+├── CLAUDE.md                    # Claude Code instructions
+├── AGENTS.md                    # Agent-agnostic instructions
+├── .cursorrules                 # Cursor rules
+├── copilot-instructions.md      # Copilot instructions
+├── llms.txt                     # Agent discovery (short)
+├── llms-full.txt                # Agent discovery (full)
+├── README.md                    # This file
+├── .claude/commands/            # Claude Code slash commands
+│   ├── ingest.md
+│   ├── ask.md
+│   ├── research.md
+│   ├── daily.md
+│   ├── sync.md
+│   ├── status.md
+│   └── expand.md
+├── sources/                     # Raw materials (immutable)
+│   ├── README.md
+│   └── _template.md
+├── wiki/                        # Synthesized knowledge
+│   ├── README.md
+│   ├── _template.md
+│   ├── index.md
+│   └── contradictions.md
+├── journal/                     # Human thinking
+│   ├── README.md
+│   └── _template.md
+├── schema/                      # Rules
+│   ├── README.md
+│   ├── agent-protocol.md
+│   ├── tags.md
+│   └── templates.md
+└── scripts/                     # Utility scripts
+    └── sync.sh
+```
