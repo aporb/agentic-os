@@ -1,84 +1,143 @@
-# AGENTS.md — Agent-Agnostic Instructions
+# AGENTS.md — Working on the Agentic OS Console codebase
 
-This file provides operating instructions for any AI agent working in this vault — whether that's Claude Code, OpenAI Codex, OpenCode, Cursor, GitHub Copilot, or any other agentic harness.
+> Instructions for AI agents (Claude Code, Cursor, Copilot, etc.) helping develop **this codebase**. End users don't read this file — they install via Hermes per the README.
 
-## Read This First
+## What this repo is
 
-**All operating rules live in `/schema/agent-protocol.md`.** That file is the single source of truth. This file adds agent-agnostic guidance for the Agentic OS.
+A Next.js 15 (App Router) web app that turns Hermes Agent into an AI-native operating system for solo founders. MIT-licensed lead-gen funnel for the paid Kodax appliance.
 
-## Architecture
+Not a SaaS. Not a chat app. Not a markdown-only template. The Console is a real Next.js application that talks to a locally-running Hermes via its `api_server` gateway platform.
 
-This is an **Agentic OS** — four layers on top of a Second Brain:
+## Source-of-truth documents (read first)
 
-| Layer | Path | Purpose |
-|-------|------|---------|
-| Memory | `sources/`, `wiki/`, `journal/` | Persistent knowledge across sessions |
-| Skills | `skills/` | Repeatable procedures organized by domain |
-| Automations | `automations/` | Scheduled tasks (local or remote) |
-| Dashboard | `dashboard/` | Visual command center |
+- **`wiki/draft-agentic-os-spec.md`** — full product spec. §10 has the positioning rules. §3 has the file tree. §6 has the bridge architecture.
+- **`wiki/draft-skill-pack-design.md`** — 73-skill C-suite catalog. Migration map at Appendix B.
+- **`wiki/draft-build-plan.md`** — execution plan for v1.
+- **`wiki/methodology.md`** — the philosophy essay (also linked from the user-facing README).
 
-## Zone Access Rules
+## Tech stack
 
-| Zone | Path | Owner | Agent Access |
-|------|------|-------|-------------|
-| Sources | `sources/` | Human | **Read only** |
-| Wiki | `wiki/` | Agent | **Read + write** |
-| Journal | `journal/` | Human + Agent | **Read + write** |
-| Schema | `schema/` | Human | **Read only** (unless instructed) |
-| Skills | `skills/` | Human | **Read** (follow when invoked) |
-| Automations | `automations/` | Human | **Read** (follow when triggered) |
+- Next.js 15 App Router · TypeScript · Tailwind · shadcn-style local components (no CLI dep)
+- `better-sqlite3` for vault.db reads
+- `gray-matter` + `remark` for markdown parsing
+- `lucide-react` for icons
+- No Radix beyond what shadcn primitives use; no heavy component libraries
+- Python 3.11+ for the indexer (`scripts/index_vault.py`) and vector search (`scripts/search_vectors.py`)
 
-## Core Workflows
+## File layout (load-bearing parts)
 
-### Run a Skill
-1. Read the skill file from `skills/[pack]/[skill-name].md`
-2. Follow the steps exactly as written
-3. Save output to the location specified in the skill
+```
+app/                    Next.js routes (pages + API)
+  api/                  REST endpoints; all require validateToken()
+  page.tsx              Home dashboard
+  skills/               Pack browser, runner
+  wiki/                 Tree + page reader/editor
+  sources/              Drag-drop ingest
+components/
+  ui/                   Local shadcn-style primitives (Button, Card, Input, …)
+  home/, skills/, wiki/, sources/   Surface-specific components
+lib/
+  config.ts             Reads ~/.hermes/agentic-os/config.json
+  auth.ts               Ephemeral token, localhost-bound
+  vault.ts              Read/write markdown with frontmatter; zone access rules
+  hermes.ts             Hermes API client (status, sessions, crons, runSkill stream)
+  search.ts             Web search via ddgr → gogcli → browser fallback
+  updater.ts            Semver check + applyUpdate
+  packs.ts              Pack metadata + UI labels
+  skills.ts             Server-side skill loader (shipped + vault overrides)
+hermes/
+  install.sh            Bootstrap script Hermes runs for the user
+  start.sh, stop.sh, doctor.sh
+  persona-template.md   Generic founder-friendly default
+  bridge/               Hermes skill bundle (install/start/stop/update/doctor/vault-discover/cron-register/skill-register)
+  skills/               Shipped skill packs (ceo/, cro/, cmo/)
+scripts/
+  index_vault.py        SQLite FTS5 + vector indexer
+  search_vectors.py     Cosine similarity query helper
+```
 
-### Ingest a Source
-1. Read the source file in `sources/`.
-2. Update its frontmatter `status` to `reading`.
-3. Create or update wiki pages in `wiki/` that synthesize the source content.
-4. Use `[[source-filename]]` citations in wiki pages.
-5. Update the source frontmatter `status` to `processed`.
+## Critical conventions
 
-### Research a Topic
-1. Search existing wiki pages and sources for relevant content.
-2. If gaps exist, research externally.
-3. Save findings to wiki pages with proper citations.
+### Voice and vocabulary
+- USE: leverage, own, compete, coordination overhead, second brain, pipeline, runway
+- AVOID: productivity, efficient, automate, seamless, AI workforce, AI company, founding cohort, named-character mascots
+- Match the spec's vocabulary map (§10.4). Every README/UI string must answer "what becomes possible?" not "what gets faster?"
 
-### Daily Standup
-1. Read yesterday's journal entry.
-2. Check wiki for open items (`status: draft`, `status: in-progress`).
-3. Present: Done, Doing, Blocked, Watch.
+### Skill markdown rules
+- Every shipped skill has frontmatter: name, description, version, trigger[], integrations[], inputs[], output_artifact, frequency, pack
+- Body has 5 H2 sections: When to run / What you'll get / Steps / Output format / Example output
+- Content-generating skills (blog-post, newsletter-issue, etc.) MUST embed anti-AI-voice rules in their Steps section as numbered enforcement steps, not just style guidance.
 
-## Skill Packs
+### Zone access rules (lib/vault.ts enforces)
+- `sources/` — read-only to agent
+- `wiki/` — agent read+write
+- `journal/` — agent reads, never writes (except via /daily skill scaffolding)
+- `schema/` — read-only
 
-| Pack | Path | Skills |
-|------|------|--------|
-| Market Intel | `skills/market-intel/` | Competitor Research, Industry Trends |
-| Content Engine | `skills/content-engine/` | Blog Post, Social Content, Newsletter |
-| Sales Engine | `skills/sales-engine/` | Prospect Research, Outreach Email, Pitch Deck Section |
-| Operations | `skills/operations/` | Daily Standup, Weekly Review, Meeting Prep, Financial Tracker |
+### Hybrid skill override
+- Shipped skills live in `hermes/skills/<pack>/<name>.md`
+- User overrides live in `<vault>/skills/<pack>/<name>.md`
+- Vault wins on name conflict. Don't ever clobber a vault override on update.
 
-## Key Rules
+### Auth
+- All `/api/*` routes call `validateToken()` first.
+- Token is ephemeral, written to `~/.hermes/agentic-os/token` at server start.
+- Browser receives via `?t=<token>` on initial launch URL, then via cookie.
 
-1. **Never modify `reviewed` or `stable` wiki pages** without explicit instruction.
-2. **Never modify files in `sources/`.**
-3. **Always include frontmatter** — see `/schema/agent-protocol.md` for formats.
-4. **Flag contradictions** in `/wiki/contradictions.md`.
-5. **No fabrication.** If the source doesn't say it, don't write it.
-6. **One concept per wiki page.** Split broad pages.
-7. **Check memory first.** Always search wiki and sources before researching from scratch.
-8. **Write like a human.** No AI hedging, no em-dash abuse, no corporate jargon.
+### Search-via-CLI
+- `lib/search.ts` shells out to `ddgr` and `gogcli` via Node's `execFileSync`. NO paid search APIs in this repo.
+- If both are missing, fall back to the Hermes browser tool (proxied through `/api/hermes/...`).
 
-## Agent-Specific Files
+### Mobile-first
+- 44px+ tap targets globally. Add `dense` class to opt out (sidebars, tables).
+- No horizontal scroll. Single-column stacking on the home dashboard mobile layout.
 
-Different agents use different instruction files. All point to the same source of truth:
+## Hermes bridge
 
-| Agent | Instruction File |
-|-------|-----------------|
-| Claude Code | `CLAUDE.md` + `.claude/commands/` |
-| Cursor | `.cursorrules` |
-| GitHub Copilot | `copilot-instructions.md` |
-| Other | This file (`AGENTS.md`) |
+The bridge is **the only thing** that mutates Hermes state. The Next.js app is read-mostly toward Hermes; all writes (cron register, skill install, server restart) flow through the bridge skills at `hermes/bridge/`.
+
+Don't add new Hermes mutation paths in the Next.js app. Add a bridge skill instead.
+
+## Don't do
+
+- Don't add a chat surface to the app — Hermes already has chat (CLI/TUI/`hermes dashboard`/Telegram/etc.). Per Hermes' own AGENTS.md guidance, "do not re-implement the primary chat experience in React."
+- Don't add paid-tier feature flags or upsell prompts in the OSS code. Kodax features live in a separate private repo.
+- Don't run `git push` from any tool unless the user explicitly asks.
+- Don't introduce paid search APIs (Tavily, Perplexity, Bing). The ddgr/gogcli/browser cascade is a deliberate differentiator.
+- Don't anthropomorphize with named character mascots. The persona system is user-customizable, not a fixed cast.
+
+## Testing
+
+No vitest setup in v1. Type checking + Next.js build are the smoke tests:
+
+```bash
+npm install
+npm run typecheck
+npm run build
+```
+
+When adding tests in v2, use vitest + @testing-library/react. Don't write change-detector tests (see Hermes' own conventions).
+
+## Branch and commit
+
+- Working branch: `v1-rewrite` (will merge to `main` when v1 ships)
+- Commit subjects: `feat(scope): subject`, `fix(scope): subject`, `docs(scope): subject`
+- Don't squash-merge stale branches; rebase first
+
+## Quick run
+
+```bash
+npm install                    # first time only
+npm run dev                    # localhost:18443 in dev mode
+npm run build && npm start     # production build
+npm run typecheck              # tsc --noEmit, fast
+```
+
+The dev server expects `~/.hermes/agentic-os/config.json` to exist (created by `hermes/install.sh`). For local dev without going through the installer, write a minimal one:
+
+```bash
+mkdir -p ~/.hermes/agentic-os
+cat > ~/.hermes/agentic-os/config.json <<EOF
+{"vault_path": "$HOME/Documents/Second Brain", "port": 18443}
+EOF
+```
