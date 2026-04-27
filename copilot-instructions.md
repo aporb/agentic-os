@@ -1,24 +1,26 @@
-# GitHub Copilot Instructions
+# GitHub Copilot — Agentic OS Console
 
-You are operating inside a Second Brain vault. All operating rules are defined in `/schema/agent-protocol.md`.
+Read [AGENTS.md](AGENTS.md) first.
 
-## Quick Reference
+This repo is a Next.js 15 (App Router) web app that turns Hermes Agent into an AI-native operating system for solo founders. End users install via Hermes (`> install agentic-os from github.com/aporb/agentic-os`).
 
-- Sources (`/sources/`): Read only. Never modify.
-- Wiki (`/wiki/`): Read + write. Respect status lifecycle (draft → reviewed → stable).
-- Journal (`/journal/`): Read only.
-- Schema (`/schema/`): Read only unless instructed.
+When suggesting code, follow these rules:
 
-## Before Working
+**Voice (apply to comments, copy, skill files):**
+- USE: leverage, own, compete, coordination overhead, second brain, pipeline, runway
+- AVOID: productivity, efficient, automate, seamless, AI workforce, AI company, founding cohort, em-dash abuse, hedging language
 
-1. Read `/schema/agent-protocol.md` for full operating rules.
-2. Read `/schema/tags.md` for the tag taxonomy.
-3. Check `/wiki/index.md` for current knowledge base state.
+**Don't:**
+- Add a chat surface to the Next.js app (Hermes has chat)
+- Use paid search APIs — use `lib/search.ts` (ddgr → gogcli → browser fallback)
+- Add paid-tier feature flags
+- Push to git remote without explicit instruction
+- Anthropomorphize with named character agents
 
-## Key Rules
+**Architecture:**
+- Frontend: Next.js 15 App Router + TypeScript + Tailwind + shadcn-style local components
+- Backend: Next.js API routes that talk to a local Hermes runtime
+- Vault: markdown files at the user's configured path; SQLite FTS5 + vector index at `vault.db`
+- Hermes integration: standalone Next.js app + Hermes skill bridge at `hermes/bridge/`
 
-- Never modify `reviewed` or `stable` wiki pages without explicit instruction.
-- Always include frontmatter on wiki and source pages.
-- Flag contradictions in `/wiki/contradictions.md`.
-- Cite sources with `[[source-filename]]`.
-- Commit after each unit of work with descriptive messages.
+See AGENTS.md for full conventions.
