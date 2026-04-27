@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronRight, ChevronDown, FileText, FolderClosed } from "lucide-react";
+import { ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { VaultTreeNode } from "@/lib/vault";
 
@@ -23,16 +23,23 @@ function Node({ node, depth }: { node: VaultTreeNode; depth: number }) {
         <button
           onClick={() => setOpen(!open)}
           className={cn(
-            "flex w-full items-center gap-1 rounded px-2 py-1 text-left text-sm hover:bg-secondary/60",
-            depth === 0 ? "font-semibold" : "",
+            "flex w-full items-center gap-1 rounded px-2 py-1 text-left text-sm transition-colors hover:bg-[hsl(var(--bg-elevated))]",
+            depth === 0
+              ? "font-semibold text-[hsl(var(--fg-primary))]"
+              : "text-[hsl(var(--fg-secondary))]",
           )}
           style={{ paddingLeft: `${depth * 12 + 8}px` }}
         >
-          {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-          <FolderClosed className="h-3 w-3 text-muted-foreground" />
+          {open ? (
+            <ChevronDown className="h-3 w-3 text-[hsl(var(--fg-dim))]" />
+          ) : (
+            <ChevronRight className="h-3 w-3 text-[hsl(var(--fg-dim))]" />
+          )}
           <span>{node.name}</span>
           {node.children && (
-            <span className="ml-auto text-xs text-muted-foreground">{node.children.length}</span>
+            <span className="ml-auto font-mono text-[10px] text-[hsl(var(--fg-dim))]">
+              {node.children.filter((c) => c.type === "file" && c.path.endsWith(".md")).length || node.children.length}
+            </span>
           )}
         </button>
         {open && (
@@ -47,14 +54,15 @@ function Node({ node, depth }: { node: VaultTreeNode; depth: number }) {
   }
   if (!node.path.endsWith(".md")) return null;
   const slug = node.path.replace(/\.md$/, "");
+  const baseName = node.name.replace(/\.md$/, "");
   return (
     <Link
       href={`/wiki/${slug}`}
-      className="flex items-center gap-1 rounded px-2 py-1 text-sm text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+      className="group flex items-center gap-1.5 rounded px-2 py-1 text-sm text-[hsl(var(--fg-dim))] transition-colors hover:bg-[hsl(var(--bg-elevated))] hover:text-[hsl(var(--fg-primary))]"
       style={{ paddingLeft: `${depth * 12 + 8 + 12}px` }}
     >
-      <FileText className="h-3 w-3" />
-      <span className="truncate">{node.name.replace(/\.md$/, "")}</span>
+      <span className="text-[hsl(var(--fg-dim))] opacity-50 group-hover:opacity-100">·</span>
+      <span className="truncate">{baseName}</span>
     </Link>
   );
 }

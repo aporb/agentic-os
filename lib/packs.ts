@@ -50,33 +50,37 @@ export const PACKS: Pack[] = [
     id: "cpo",
     label: "Product",
     subtitle: "Build & Ship",
-    description: "v2 — coming next.",
+    description:
+      "Feature specs, user feedback synthesis, backlog prioritization, sprint planning, release notes, bug triage, roadmap narrative.",
     emoji: "◇",
-    v1: false,
+    v1: true,
   },
   {
     id: "cto",
     label: "Engineering",
     subtitle: "Code & Infrastructure",
-    description: "v2 — coming next.",
+    description:
+      "Technical specs, code review, security review, dependency audits, architecture decisions, infrastructure cost audits, post-mortems.",
     emoji: "⚙",
-    v1: false,
+    v1: true,
   },
   {
     id: "caio",
     label: "AI Ops",
     subtitle: "Automation & Agents",
-    description: "v2 — coming next.",
+    description:
+      "AI stack audits, agent workflow design, skill authoring, prompt library, model benchmarking, vendor research, cost optimization.",
     emoji: "✺",
-    v1: false,
+    v1: true,
   },
   {
     id: "cfo",
     label: "Finance",
     subtitle: "Runway & Pricing",
-    description: "v2 — coming next.",
+    description:
+      "Monthly financial summaries, unit economics, pricing strategy, investor metrics, expense audits, runway scenarios, tax prep.",
     emoji: "$",
-    v1: false,
+    v1: true,
   },
 ];
 

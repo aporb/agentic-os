@@ -5,30 +5,46 @@ import { listSkills } from "@/lib/skills";
 export const dynamic = "force-dynamic";
 
 export default function SkillsIndexPage() {
-  const counts = new Map<string, number>();
-  for (const pack of PACKS) {
-    if (!pack.v1) {
-      counts.set(pack.id, 0);
-      continue;
-    }
-    counts.set(pack.id, listSkills(pack.id).length);
-  }
+  const skillsByPack = new Map(
+    PACKS.map((p) => [p.id, listSkills(p.id)] as const),
+  );
+
+  const totalSkills = Array.from(skillsByPack.values()).reduce(
+    (sum, arr) => sum + arr.length,
+    0,
+  );
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Your AI C-suite</h1>
-        <p className="text-sm text-muted-foreground">
-          Each pack is a set of plain-English skills your agent runs on demand or on a schedule.
-          Edit any skill in your vault to customize it; your version always wins over the shipped one.
-        </p>
-      </header>
+    <div className="flex flex-col">
+      <section className="hero-glow border-b border-[hsl(var(--border-default))] px-6 py-12">
+        <div className="container mx-auto max-w-6xl">
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Your AI C-suite
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-[hsl(var(--fg-secondary))]">
+            Each pack is a set of plain-English skills your agent runs on
+            demand or on a schedule. Edit any skill in your vault to customize
+            it; your version always wins.
+          </p>
+          <p className="mt-4 font-mono text-[10px] text-[hsl(var(--fg-dim))]">
+            {totalSkills} skills · {PACKS.filter((p) => p.v1).length} active packs
+          </p>
+        </div>
+      </section>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {PACKS.map((pack) => (
-          <PackCard key={pack.id} pack={pack} skillCount={counts.get(pack.id) ?? 0} />
-        ))}
-      </div>
+      <section className="px-6 py-6">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {PACKS.map((pack) => (
+              <PackCard
+                key={pack.id}
+                pack={pack}
+                skills={skillsByPack.get(pack.id) ?? []}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

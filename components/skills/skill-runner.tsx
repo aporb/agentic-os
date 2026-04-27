@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Play, Loader2 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Play, FileText, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/cn";
 import type { Skill } from "@/lib/skills";
 
 type RunEvent =
@@ -21,12 +22,16 @@ export function SkillRunner({ skill, token }: { skill: Skill; token: string }) {
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [running, setRunning] = useState(false);
   const [events, setEvents] = useState<RunEvent[]>([]);
+  const [delta, setDelta] = useState("");
   const [artifact, setArtifact] = useState<{ path: string; preview: string } | null>(null);
+  const [finalText, setFinalText] = useState<string | null>(null);
 
   async function run() {
     setRunning(true);
     setEvents([]);
+    setDelta("");
     setArtifact(null);
+    setFinalText(null);
     try {
       const res = await fetch("/api/skills/run", {
         method: "POST",
@@ -37,10 +42,7 @@ export function SkillRunner({ skill, token }: { skill: Skill; token: string }) {
         body: JSON.stringify({ skill_id: skill.id, inputs }),
       });
       if (!res.ok || !res.body) {
-        setEvents((e) => [
-          ...e,
-          { type: "error", message: `Server returned ${res.status}` },
-        ]);
+        setEvents((e) => [...e, { type: "error", message: `Server returned ${res.status}` }]);
         return;
       }
       const reader = res.body.getReader();
@@ -58,17 +60,16 @@ export function SkillRunner({ skill, token }: { skill: Skill; token: string }) {
           try {
             const evt = JSON.parse(line) as RunEvent;
             setEvents((e) => [...e, evt]);
+            if (evt.type === "delta") setDelta((d) => d + evt.text);
             if (evt.type === "artifact") setArtifact({ path: evt.path, preview: evt.preview });
+            if (evt.type === "done") setFinalText(evt.final_response);
           } catch {
-            /* ignore parse errors */
+            /* parse error — skip */
           }
         }
       }
     } catch (err) {
-      setEvents((e) => [
-        ...e,
-        { type: "error", message: (err as Error).message },
-      ]);
+      setEvents((e) => [...e, { type: "error", message: (err as Error).message }]);
     } finally {
       setRunning(false);
     }
@@ -76,121 +77,167 @@ export function SkillRunner({ skill, token }: { skill: Skill; token: string }) {
 
   const required = (skill.fm.inputs ?? []).filter((i) => i.required);
   const ready = required.every((i) => inputs[i.name]?.trim());
+  const hasOutput = events.length > 0 || delta || artifact || finalText;
+
+  const toolEvents = events.filter((e) => e.type === "tool");
+  const errorEvent = events.find((e) => e.type === "error");
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Inputs</CardTitle>
-          <p className="text-xs text-muted-foreground">{skill.fm.description}</p>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      {/* Input panel */}
+      <Card className="p-5">
+        <div className="space-y-4">
           {(skill.fm.inputs ?? []).length === 0 && (
-            <p className="text-sm text-muted-foreground">No inputs required.</p>
-          )}
-          {(skill.fm.inputs ?? []).map((input) => (
-            <div key={input.name} className="space-y-1">
-              <label className="block text-sm font-medium">
-                {input.name}
-                {input.required && <span className="text-destructive"> *</span>}
-              </label>
-              <p className="text-xs text-muted-foreground">{input.description}</p>
-              {input.description?.length > 60 ? (
-                <Textarea
-                  value={inputs[input.name] ?? ""}
-                  onChange={(e) =>
-                    setInputs({ ...inputs, [input.name]: e.target.value })
-                  }
-                />
-              ) : (
-                <Input
-                  value={inputs[input.name] ?? ""}
-                  onChange={(e) =>
-                    setInputs({ ...inputs, [input.name]: e.target.value })
-                  }
-                />
-              )}
+            <div className="rounded border border-dashed border-[hsl(var(--border-default))] bg-[hsl(var(--bg-elevated))] px-4 py-8 text-center">
+              <p className="text-sm text-[hsl(var(--fg-secondary))]">
+                No inputs required.
+              </p>
+              <p className="mt-1 text-xs text-[hsl(var(--fg-dim))]">
+                This skill runs from vault context only.
+              </p>
             </div>
-          ))}
-          <Button disabled={!ready || running} onClick={run} className="w-full">
+          )}
+          {(skill.fm.inputs ?? []).map((input) => {
+            const isLong = input.description?.length > 60;
+            return (
+              <div key={input.name} className="space-y-1.5">
+                <label className="flex items-baseline justify-between">
+                  <span className="label-uppercase">
+                    {input.name}
+                    {input.required && (
+                      <span className="ml-1 text-[hsl(var(--status-err))]">*</span>
+                    )}
+                  </span>
+                  {!input.required && (
+                    <span className="text-[10px] text-[hsl(var(--fg-dim))]">optional</span>
+                  )}
+                </label>
+                <p className="text-xs text-[hsl(var(--fg-dim))]">{input.description}</p>
+                {isLong ? (
+                  <Textarea
+                    value={inputs[input.name] ?? ""}
+                    onChange={(e) => setInputs({ ...inputs, [input.name]: e.target.value })}
+                    className="font-mono text-[13px]"
+                    rows={4}
+                  />
+                ) : (
+                  <Input
+                    value={inputs[input.name] ?? ""}
+                    onChange={(e) => setInputs({ ...inputs, [input.name]: e.target.value })}
+                  />
+                )}
+              </div>
+            );
+          })}
+          <Button
+            disabled={!ready || running}
+            onClick={run}
+            className="h-12 w-full text-sm"
+          >
             {running ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span className="inline-flex items-center gap-3">
+                <span className="running-dots">
+                  <span /><span /><span />
+                </span>
                 Running…
-              </>
+              </span>
             ) : (
-              <>
-                <Play className="mr-2 h-4 w-4" />
+              <span className="inline-flex items-center gap-2">
+                <Play className="h-3.5 w-3.5" />
                 Run skill
-              </>
+              </span>
             )}
           </Button>
-        </CardContent>
+        </div>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Output</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {events.length === 0 && !artifact && (
-            <p className="text-sm text-muted-foreground">
-              Run the skill to see streaming output.
-            </p>
-          )}
-          {events.length > 0 && (
-            <div className="mb-4 max-h-96 overflow-y-auto rounded-md bg-muted p-3 font-mono text-xs">
-              {events.map((e, i) => (
-                <EventLine key={i} evt={e} />
-              ))}
+      {/* Output panel */}
+      <div className="space-y-3">
+        {!hasOutput && !running && (
+          <div className="flex h-[200px] items-center justify-center rounded-[var(--radius)] border-2 border-dashed border-[hsl(var(--border-default))] bg-transparent">
+            <div className="text-center">
+              <FileText className="mx-auto h-6 w-6 text-[hsl(var(--fg-dim))]" />
+              <p className="mt-3 text-sm text-[hsl(var(--fg-dim))]">
+                Artifact will appear here
+              </p>
+              <p className="mt-1 font-mono text-[10px] text-[hsl(var(--fg-dim))]">
+                {skill.fm.output_artifact}
+              </p>
             </div>
-          )}
-          {artifact && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Artifact
-                </span>
-                <Badge variant="outline" className="font-mono text-[10px]">
-                  {artifact.path}
-                </Badge>
-              </div>
-              <pre className="max-h-96 overflow-auto rounded-md bg-muted p-3 text-xs">
+          </div>
+        )}
+
+        {(running || (toolEvents.length > 0 && !artifact && !finalText)) && (
+          <Card className="p-4">
+            <div className="label-uppercase mb-3">Stream</div>
+            <div className="space-y-1 max-h-80 overflow-y-auto">
+              {toolEvents.map((e, i) => (
+                <div
+                  key={i}
+                  className="font-mono text-[11px] text-[hsl(var(--fg-dim))] flex items-center gap-2"
+                >
+                  <span className="text-[hsl(var(--accent-base))]">·</span>
+                  {e.type === "tool" && (
+                    <>
+                      <span>{e.tool}</span>
+                      <span className="opacity-60">{e.status}</span>
+                    </>
+                  )}
+                </div>
+              ))}
+              {delta && (
+                <div className="mt-3 text-sm leading-relaxed text-[hsl(var(--fg-secondary))] whitespace-pre-wrap">
+                  {delta}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {artifact && (
+          <div className="artifact-reveal rounded-[var(--radius)] border border-[hsl(var(--accent-base)/0.4)] bg-[hsl(var(--accent-dim))] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="label-uppercase text-[hsl(var(--accent-base))]">
+                Artifact
+              </span>
+              <span className="font-mono text-[10px] text-[hsl(var(--fg-secondary))]">
+                {artifact.path}
+              </span>
+            </div>
+            <div className="rounded bg-[hsl(var(--bg-surface))] p-3 max-h-96 overflow-y-auto">
+              <pre className="font-mono text-xs leading-relaxed text-[hsl(var(--fg-primary))] whitespace-pre-wrap">
                 {artifact.preview}
               </pre>
-              <a
-                href={`/wiki/${artifact.path.replace(/^wiki\//, "").replace(/\.md$/, "")}`}
-                className="inline-block text-xs underline"
-              >
-                Open artifact →
-              </a>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <Link
+              href={`/wiki/${artifact.path.replace(/^wiki\//, "").replace(/\.md$/, "")}`}
+              className={cn(
+                "mt-3 inline-flex h-8 items-center gap-1.5 rounded-md border border-[hsl(var(--border-default))] bg-[hsl(var(--bg-surface))] px-3 text-xs font-medium",
+                "text-[hsl(var(--fg-primary))] transition-colors hover:border-[hsl(var(--border-strong))]",
+              )}
+            >
+              Open in Wiki
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        )}
+
+        {finalText && !artifact && (
+          <Card className="p-4">
+            <div className="label-uppercase mb-3">Output</div>
+            <div className="markdown-body text-sm whitespace-pre-wrap">{finalText}</div>
+          </Card>
+        )}
+
+        {errorEvent && errorEvent.type === "error" && (
+          <Card className="p-4 border-[hsl(var(--status-err))]">
+            <div className="label-uppercase text-[hsl(var(--status-err))] mb-2">Error</div>
+            <p className="font-mono text-xs text-[hsl(var(--fg-secondary))]">
+              {errorEvent.message}
+            </p>
+          </Card>
+        )}
+      </div>
     </div>
   );
-}
-
-function EventLine({ evt }: { evt: RunEvent }) {
-  const text = (() => {
-    switch (evt.type) {
-      case "start":
-        return `▶ start ${evt.run_id}`;
-      case "log":
-        return evt.line;
-      case "tool":
-        return `· ${evt.tool} ${evt.status}`;
-      case "delta":
-        return evt.text;
-      case "artifact":
-        return `📝 wrote ${evt.path}`;
-      case "done":
-        return `✓ done`;
-      case "error":
-        return `✗ ${evt.message}`;
-    }
-  })();
-  const cls = evt.type === "error" ? "text-destructive" : evt.type === "delta" ? "" : "text-muted-foreground";
-  return <div className={cls}>{text}</div>;
 }

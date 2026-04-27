@@ -29,7 +29,7 @@ const DEFAULTS: Omit<Config, "vault_path" | "install_id"> = {
   port: 18443,
   host: "127.0.0.1",
   agent_name: "your assistant",
-  hermes_api_url: "http://127.0.0.1:7421",
+  hermes_api_url: "http://127.0.0.1:8642",
   hermes_token: null,
   last_check_for_updates: null,
 };
