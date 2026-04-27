@@ -64,6 +64,18 @@ function zoneOf(relPath: string): VaultZone | "other" {
   return "other";
 }
 
+function toDateString(v: unknown): string | undefined {
+  if (typeof v === "string") return v;
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  return undefined;
+}
+
+function toStringArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map((x) => String(x));
+  if (typeof v === "string") return [v];
+  return [];
+}
+
 export function readFile(relPath: string): VaultFile {
   const root = vaultRoot();
   const absolute = join(root, relPath);
@@ -74,11 +86,11 @@ export function readFile(relPath: string): VaultFile {
     zone: zoneOf(relPath),
     path: relPath,
     absolute,
-    title: (fm.title as string) ?? relPath,
+    title: typeof fm.title === "string" ? fm.title : relPath,
     status: fm.status as VaultFile["status"],
-    tags: (fm.tags as string[]) ?? [],
-    created: fm.created as string | undefined,
-    updated: fm.updated as string | undefined,
+    tags: toStringArray(fm.tags),
+    created: toDateString(fm.created),
+    updated: toDateString(fm.updated),
     body: parsed.content,
     raw,
     frontmatter: fm,

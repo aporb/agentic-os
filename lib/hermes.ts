@@ -88,20 +88,28 @@ class HermesClient {
   }
 
   async listSessions(limit = 5): Promise<HermesSession[]> {
-    const res = await fetch(
-      `${this.baseUrl}/v1/sessions?limit=${limit}`,
-      { headers: this.headers() },
-    );
-    if (!res.ok) return [];
-    return (await res.json()) as HermesSession[];
+    try {
+      const res = await fetch(
+        `${this.baseUrl}/v1/sessions?limit=${limit}`,
+        { headers: this.headers() },
+      );
+      if (!res.ok) return [];
+      return (await res.json()) as HermesSession[];
+    } catch {
+      return [];
+    }
   }
 
   async listCrons(): Promise<HermesCron[]> {
-    const res = await fetch(`${this.baseUrl}/v1/cron`, {
-      headers: this.headers(),
-    });
-    if (!res.ok) return [];
-    return (await res.json()) as HermesCron[];
+    try {
+      const res = await fetch(`${this.baseUrl}/v1/cron`, {
+        headers: this.headers(),
+      });
+      if (!res.ok) return [];
+      return (await res.json()) as HermesCron[];
+    } catch {
+      return [];
+    }
   }
 
   /**

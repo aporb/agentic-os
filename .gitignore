@@ -53,3 +53,6 @@ desktop.ini
 # Obsidian (legacy from second-brain template)
 .obsidian/
 .trash/
+
+# Internal planning drafts — kept locally, never published
+wiki/draft-*.md
