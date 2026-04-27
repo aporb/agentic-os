@@ -22,7 +22,7 @@ import {
   existsSync,
   mkdirSync,
 } from "node:fs";
-import { join, relative, dirname, sep } from "node:path";
+import { join, relative, dirname, sep, resolve } from "node:path";
 import matter from "gray-matter";
 import { getConfig } from "./config";
 
@@ -53,7 +53,7 @@ export type VaultTreeNode = {
 const READ_ONLY_ZONES: VaultZone[] = ["sources", "schema"];
 
 function vaultRoot(): string {
-  return getConfig().vault_path;
+  return resolve(getConfig().vault_path);
 }
 
 function zoneOf(relPath: string): VaultZone | "other" {
@@ -62,6 +62,19 @@ function zoneOf(relPath: string): VaultZone | "other" {
     return top as VaultZone;
   }
   return "other";
+}
+
+/**
+ * Resolve a vault-relative path to an absolute path and verify it stays
+ * inside the vault root. Refuses path-traversal attempts (../).
+ */
+function safeAbsolute(relPath: string): string {
+  const root = vaultRoot();
+  const abs = resolve(join(root, relPath));
+  if (abs !== root && !abs.startsWith(root + sep)) {
+    throw new Error(`path escape rejected: ${relPath}`);
+  }
+  return abs;
 }
 
 function toDateString(v: unknown): string | undefined {
@@ -77,8 +90,7 @@ function toStringArray(v: unknown): string[] {
 }
 
 export function readFile(relPath: string): VaultFile {
-  const root = vaultRoot();
-  const absolute = join(root, relPath);
+  const absolute = safeAbsolute(relPath);
   const raw = readFileSync(absolute, "utf8");
   const parsed = matter(raw);
   const fm = parsed.data as Record<string, unknown>;
@@ -110,8 +122,7 @@ export function writeFile(
     );
   }
 
-  const root = vaultRoot();
-  const absolute = join(root, relPath);
+  const absolute = safeAbsolute(relPath);
   mkdirSync(dirname(absolute), { recursive: true });
 
   const today = new Date().toISOString().slice(0, 10);

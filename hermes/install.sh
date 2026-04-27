@@ -135,8 +135,16 @@ setup_vault() {
     fi
   fi
 
-  # Persist vault path to config.json
-  jq -n --arg p "$vault_path" '{vault_path: $p}' > "$APP_STATE_DIR/config.json.tmp"
+  # Persist full config to config.json (vault, port, host, agent name, install id).
+  # Subsequent steps (persona wizard) may overwrite agent_name; do a final
+  # write at the end of the install in case anything else changes.
+  local install_id="install-$(date +%s)-$RANDOM"
+  jq -n \
+    --arg vault "$vault_path" \
+    --arg port "$DEFAULT_PORT" \
+    --arg id "$install_id" \
+    '{vault_path: $vault, port: ($port|tonumber), host: "127.0.0.1", agent_name: "your assistant", hermes_api_url: "http://127.0.0.1:7421", hermes_token: null, last_check_for_updates: null, install_id: $id}' \
+    > "$APP_STATE_DIR/config.json.tmp"
   mv "$APP_STATE_DIR/config.json.tmp" "$APP_STATE_DIR/config.json"
 }
 
@@ -156,6 +164,13 @@ setup_persona() {
   agent_name=$(ask "What do you want to call your assistant?" "your assistant")
   agent_voice=$(ask "Voice (one word)? clear / warm / direct / playful" "direct")
   agent_focus=$(ask "Top job-to-be-done? (e.g. 'help me ship faster')" "help me ship faster")
+
+  # Mirror agent_name into config.json so the Settings page shows it.
+  if [[ -f "$APP_STATE_DIR/config.json" ]]; then
+    jq --arg name "$agent_name" '.agent_name = $name' "$APP_STATE_DIR/config.json" \
+      > "$APP_STATE_DIR/config.json.tmp" \
+      && mv "$APP_STATE_DIR/config.json.tmp" "$APP_STATE_DIR/config.json"
+  fi
 
   cat > "$persona_path" <<EOF
 # Agent Persona

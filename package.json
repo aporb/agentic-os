@@ -10,9 +10,9 @@
     "url": "https://github.com/aporb/agentic-os.git"
   },
   "scripts": {
-    "dev": "next dev -p 18443",
+    "dev": "next dev -H 127.0.0.1 -p 18443",
     "build": "next build",
-    "start": "next start -p 18443",
+    "start": "next start -H 127.0.0.1 -p 18443",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },

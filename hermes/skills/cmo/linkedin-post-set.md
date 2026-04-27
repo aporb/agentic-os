@@ -112,12 +112,12 @@ Suggested day: Tuesday
 
 ```
 --- POST 1 of 5 ---
-Angle: Contrarian take on AI productivity claims
+Angle: Contrarian take on AI tooling advice
 Hook strategy: Contrarian
 Character count: 312
 Suggested day: Monday
 
-Most AI productivity advice is solving the wrong problem.
+Most AI advice is solving the wrong problem.
 
 The goal isn't to write faster. The goal is to stop re-establishing
 context every time you sit down to do something.

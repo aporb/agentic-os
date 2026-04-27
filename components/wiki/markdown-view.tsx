@@ -17,8 +17,11 @@ export async function MarkdownView({ body }: { body: string }) {
     },
   );
 
+  // sanitize:true uses the GFM-flavored sanitize schema and strips <script>,
+  // event handlers, and dangerous URLs. Critical because /sources can ingest
+  // arbitrary external HTML — without this, an ingested page can XSS the user.
   const html = String(
-    await remark().use(remarkGfm).use(remarkHtml, { sanitize: false }).process(withWikilinks),
+    await remark().use(remarkGfm).use(remarkHtml, { sanitize: true }).process(withWikilinks),
   );
 
   return (

@@ -153,8 +153,8 @@ format: hybrid
 
 ---
 
-Six months ago, you probably started using AI to write faster.
-That was the right first step and the wrong stopping point.
+Six months ago, you started using AI to write. That was the right
+first step and the wrong stopping point.
 
 The founders getting real distance from AI right now aren't using it
 to produce more content. They're using it to eliminate the coordination

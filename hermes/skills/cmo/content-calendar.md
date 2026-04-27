@@ -68,7 +68,7 @@ The calendar is driven by your goals, not by generic content advice. If your goa
 
 7. Check for week-level coherence: each week's pieces across channels should share a through-line, not be disconnected items. Monday's LinkedIn post should relate to Thursday's newsletter, which should relate to any blog content that week. This is what makes a content calendar a strategy rather than a schedule.
 
-8. Check for month-level arc: the 4 weeks should build on each other. Week 1 might introduce the month's core claim. Week 2 provides evidence or examples. Week 3 addresses the counterargument or goes deeper on one angle. Week 4 gives the practical implication or call to action. This is optional but significantly increases the value of a 4-week run.
+8. Check for month-level arc: the 4 weeks should build on each other. Week 1 introduces the month's core claim. Week 2 provides evidence or examples. Week 3 addresses the counterargument or goes deeper on one angle. Week 4 gives the practical implication or call to action. Optional but significantly increases the value of a 4-week run.
 
 9. Create Google Calendar events for each piece's publish date. Event title: "[Channel] — [piece title]". Event duration: 30 minutes at the planned publish time. Event description: the one-line angle brief from step 6. Color code if possible: newsletter = blue, blog = green, LinkedIn = orange (or whatever convention you establish — document it in the vault calendar page).
 

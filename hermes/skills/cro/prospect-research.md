@@ -39,7 +39,7 @@ A single wiki page saved to `wiki/prospect-{slug}.md` with:
 - Company overview: size, stage, funding, industry, geography, business model
 - Decision-maker map: who likely owns the budget and the problem you solve
 - Recent signals: funding rounds, hiring patterns, product launches, press, job postings
-- Fit assessment: why this account might be a match, and where the gaps or risks are
+- Fit assessment: why this account is or isn't a real deal, and where the gaps or risks are
 - Talking points: 2–3 specific, non-generic angles for the first conversation
 - Open questions: what you still don't know that matters before outreach
 

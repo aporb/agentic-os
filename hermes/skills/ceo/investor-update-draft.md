@@ -44,7 +44,7 @@ Run on-demand any time you owe an update and want help drafting it.
 
 ## What you'll get
 
-A clean, honest investor memo in the format investors actually read: metrics first, narrative second, ask at the end. The draft pulls from your vault to surface milestones you've documented, so you don't have to reconstruct the month from memory. You review, adjust the numbers, and send. The update that used to take 2 hours to stare at before writing now takes 20 minutes to review and personalize.
+A clean, honest investor memo in the format investors actually read: metrics first, narrative second, ask at the end. The draft starts from your assembled month — milestones from your weekly reviews, metrics from Stripe, decisions you've documented in the wiki — instead of from a blank page. You arrive at review-ready with the month's context already in place, instead of spending the first hour reconstructing it from scratch.
 
 ## Steps
 
