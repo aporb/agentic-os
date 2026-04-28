@@ -1,7 +1,7 @@
 ---
 name: smart-commit
 description: Read staged changes, generate a conventional commit message, and run git commit — no manual message writing.
-version: 1.0.0
+version: 2.0.0
 trigger:
   - "smart commit"
   - "commit these changes"
@@ -29,6 +29,15 @@ pack: cto
 ---
 
 # Smart Commit
+
+> **v2 is live!** The comprehensive `operations/smart-commit` Hermes skill
+> (`~/.hermes/skills/operations/smart-commit/SKILL.md`) covers 18 edge cases
+> including multi-repo inventory, duplicate clones, fork detection, branch
+> mismatch, multi-machine sync, and divergent branch handling.
+>
+> This v1 file is now legacy — the v2 skill powers the daily cron job.
+> Use this v1 when you need a quick, single-repo staged-commit-only workflow.
+> Use the v2 (`operations/smart-commit`) for full-stack git intelligence.
 
 ## When to run
 
