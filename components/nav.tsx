@@ -10,6 +10,7 @@ import {
   Inbox,
   Clock,
   Settings,
+  BarChart3,
   Menu,
   X,
 } from "lucide-react";
@@ -23,6 +24,7 @@ const items = [
   { href: "/journal", label: "Journal", icon: CalendarDays },
   { href: "/sources", label: "Sources", icon: Inbox },
   { href: "/automations", label: "Automations", icon: Clock },
+  { href: "/insights", label: "Insights", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
