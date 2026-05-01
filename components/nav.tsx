@@ -13,6 +13,8 @@ import {
   BarChart3,
   Menu,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -31,8 +33,20 @@ const items = [
 export function Nav() {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [hermesUp, setHermesUp] = useState<boolean | null>(null);
   const [model, setModel] = useState<string | null>(null);
+
+  // Load collapsed state from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("nav-collapsed");
+    if (stored === "true") setCollapsed(true);
+  }, []);
+
+  // Persist collapsed state
+  useEffect(() => {
+    localStorage.setItem("nav-collapsed", String(collapsed));
+  }, [collapsed]);
 
   useEffect(() => {
     fetch("/api/hermes-status")
@@ -45,6 +59,8 @@ export function Nav() {
       })
       .catch(() => setHermesUp(false));
   }, []);
+
+  const sidebarWidth = collapsed ? "md:w-[60px]" : "md:w-[220px]";
 
   return (
     <>
@@ -77,21 +93,42 @@ export function Nav() {
       <aside
         className={cn(
           "border-[hsl(var(--border-default))] bg-[hsl(var(--bg-surface))] dense",
-          "md:flex md:w-[220px] md:flex-col md:border-r md:relative",
+          "md:flex md:flex-col md:border-r md:relative md:transition-all md:duration-200",
+          sidebarWidth,
           open
             ? "fixed top-0 left-0 z-50 flex h-screen w-64 flex-col border-r"
             : "hidden md:flex",
         )}
       >
-        {/* Logo / brand */}
+        {/* Logo / brand + collapse toggle (desktop) */}
         <div className="hidden md:flex items-center justify-between p-4 pb-3">
-          <Link
-            href="/"
-            className="font-mono text-xs font-medium tracking-[0.18em] text-[hsl(var(--fg-secondary))] uppercase"
+          {!collapsed && (
+            <Link
+              href="/"
+              className="font-mono text-xs font-medium tracking-[0.18em] text-[hsl(var(--fg-secondary))] uppercase"
+            >
+              Console
+            </Link>
+          )}
+          {collapsed && (
+            <Link
+              href="/"
+              className="mx-auto font-mono text-xs font-medium tracking-[0.18em] text-[hsl(var(--fg-secondary))] uppercase"
+            >
+              C
+            </Link>
+          )}
+          <button
+            onClick={() => setCollapsed((v) => !v)}
+            className="dense p-1 rounded hover:bg-[hsl(var(--bg-page))] transition-colors"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            Console
-          </Link>
-          <span className="font-mono text-[10px] text-[hsl(var(--fg-dim))]">v0.1</span>
+            {collapsed ? (
+              <PanelLeftOpen className="h-4 w-4 text-[hsl(var(--fg-dim))]" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4 text-[hsl(var(--fg-dim))]" />
+            )}
+          </button>
         </div>
 
         {/* Mobile close */}
@@ -111,7 +148,7 @@ export function Nav() {
         )}
 
         {/* Nav items */}
-        <nav className="flex flex-1 flex-col gap-0.5 px-2 pt-2">
+        <nav className={cn("flex flex-1 flex-col gap-0.5 pt-2", collapsed ? "px-2" : "px-2")}>
           {items.map(({ href, label, icon: Icon }) => {
             const active = path === href || (href !== "/" && path.startsWith(href));
             return (
@@ -119,8 +156,10 @@ export function Nav() {
                 key={href}
                 href={href}
                 onClick={() => setOpen(false)}
+                title={collapsed ? label : undefined}
                 className={cn(
-                  "relative flex items-center gap-2.5 rounded px-3 py-1.5 text-sm transition-colors duration-150",
+                  "relative flex items-center gap-2.5 rounded transition-colors duration-150",
+                  collapsed ? "justify-center px-1.5 py-2" : "px-3 py-1.5",
                   active
                     ? "text-[hsl(var(--fg-primary))] font-medium"
                     : "text-[hsl(var(--fg-dim))] hover:text-[hsl(var(--fg-secondary))]",
@@ -129,17 +168,17 @@ export function Nav() {
                 {active && (
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-[hsl(var(--accent-base))]" />
                 )}
-                <Icon className="h-3.5 w-3.5" />
-                {label}
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                {!collapsed && <span className="text-sm">{label}</span>}
               </Link>
             );
           })}
         </nav>
 
         {/* Bottom: theme toggle + Hermes status */}
-        <div className="border-t border-[hsl(var(--border-default))] px-3 py-3 mt-2 space-y-2">
-          <ThemeToggle className="w-full justify-center" />
-          <div className="flex items-center gap-2 px-1">
+        <div className={cn("border-t border-[hsl(var(--border-default))] py-3 mt-2 space-y-2", collapsed ? "px-2" : "px-3")}>
+          <ThemeToggle className={cn("w-full", collapsed ? "justify-center" : "justify-center")} />
+          <div className={cn("flex items-center gap-2", collapsed ? "justify-center px-0" : "px-1")}>
             <span
               className={cn(
                 "h-1.5 w-1.5 rounded-full shrink-0",
@@ -150,11 +189,13 @@ export function Nav() {
                     : "bg-[hsl(var(--status-err))]",
               )}
             />
-            <span className="font-mono text-[10px] text-[hsl(var(--fg-dim))] truncate">
-              {hermesUp === null ? "checking…" : hermesUp ? "hermes" : "hermes offline"}
-            </span>
+            {!collapsed && (
+              <span className="font-mono text-[10px] text-[hsl(var(--fg-dim))] truncate">
+                {hermesUp === null ? "checking…" : hermesUp ? "hermes" : "hermes offline"}
+              </span>
+            )}
           </div>
-          {model && (
+          {!collapsed && model && (
             <div className="ml-3.5 font-mono text-[10px] text-[hsl(var(--fg-dim))] truncate px-1">
               {model}
             </div>

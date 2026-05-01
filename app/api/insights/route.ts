@@ -4,9 +4,8 @@ import { getInsights } from "@/lib/insights";
 /**
  * GET /api/insights
  *
- * Returns live multi-profile dashboard data.
- * Reads state.db from all Hermes profiles on this machine.
- * No auth required (local-only, behind Tailscale funnel).
+ * Returns live multi-profile dashboard data with deep intelligence.
+ * No auth required — read-only data behind Tailscale network.
  */
 export const dynamic = "force-dynamic";
 

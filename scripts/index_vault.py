@@ -211,7 +211,7 @@ def vector_to_blob(vec: list[float]) -> bytes:
 
 
 def walk_vault(root: Path) -> Iterable[Path]:
-    skip_dirs = {"node_modules", ".obsidian", ".trash", ".next", "__pycache__"}
+    skip_dirs = {"node_modules", ".obsidian", ".trash", ".next", "__pycache__", "_drafts"}
     for p in root.rglob("*.md"):
         if any(part in skip_dirs or part.startswith(".") for part in p.relative_to(root).parts):
             continue
@@ -336,7 +336,7 @@ def index_file(
 
     cur.execute(
         "INSERT INTO pages_fts (path, title, body_text) VALUES (?, ?, ?)",
-        (rel_str, title or "", body_text or ""),
+        (rel_str, title or "", (body_text or "").encode("utf-8", errors="replace").decode("utf-8")),
     )
 
     upsert_tags(conn, page_id, tags)
