@@ -42,6 +42,16 @@ from typing import Any, Iterable
 
 import yaml
 
+# Kuzu graph store (optional — skip if not installed)
+try:
+    import sys
+    _kuzu_path = os.path.expanduser("~/.hermes/scripts")
+    if _kuzu_path not in sys.path:
+        sys.path.insert(0, _kuzu_path)
+    from kuzu_graph import KuzuStore, get_graph_path
+except ImportError:
+    KuzuStore = None  # Kuzu not available — skip graph indexing
+
 # ---------------------------------------------------------------------------
 # Defaults
 # ---------------------------------------------------------------------------
@@ -155,12 +165,26 @@ def init_db(conn: sqlite3.Connection) -> None:
             chunk_text TEXT NOT NULL,
             vector BLOB NOT NULL,
             model TEXT NOT NULL,
+            generated_at REAL,
             UNIQUE (page_id, chunk_idx),
             FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS vector_embeddings_log (
+            id INTEGER PRIMARY KEY,
+            embedded_at REAL NOT NULL,
+            page_id INTEGER NOT NULL,
+            page_path TEXT NOT NULL,
+            chunk_idx INTEGER NOT NULL,
+            model TEXT NOT NULL,
+            page_body_hash TEXT,
+            action TEXT
+        );
+
         CREATE INDEX IF NOT EXISTS idx_pages_zone ON pages(zone);
         CREATE INDEX IF NOT EXISTS idx_pages_status ON pages(status);
+        CREATE INDEX IF NOT EXISTS idx_vel_embedded_at ON vector_embeddings_log(embedded_at);
+        CREATE INDEX IF NOT EXISTS idx_vel_page_id ON vector_embeddings_log(page_id);
 
         CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(
             path UNINDEXED,
@@ -170,6 +194,11 @@ def init_db(conn: sqlite3.Connection) -> None:
         );
         """
     )
+
+    existing_cols = {row[1] for row in cur.execute("PRAGMA table_info(vector_embeddings)").fetchall()}
+    if "generated_at" not in existing_cols:
+        cur.execute("ALTER TABLE vector_embeddings ADD COLUMN generated_at REAL")
+
     conn.commit()
 
 
@@ -351,9 +380,29 @@ def index_file(
             if vectors and len(vectors) == len(chunks):
                 for i, (chunk, vec) in enumerate(zip(chunks, vectors)):
                     cur.execute(
-                        "INSERT INTO vector_embeddings (page_id, chunk_idx, chunk_text, vector, model) VALUES (?, ?, ?, ?, ?)",
-                        (page_id, i, chunk, vector_to_blob(vec), EMBED_MODEL),
+                        "INSERT INTO vector_embeddings (page_id, chunk_idx, chunk_text, vector, model, generated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                        (page_id, i, chunk, vector_to_blob(vec), EMBED_MODEL, now),
                     )
+                    cur.execute(
+                        "INSERT INTO vector_embeddings_log (embedded_at, page_id, page_path, chunk_idx, model, page_body_hash, action) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (now, page_id, rel_str, i, EMBED_MODEL, body_hash, "reindex" if force else action),
+                    )
+
+    # Kuzu graph upsert (for changed/new pages only)
+    if action != "skipped" and KuzuStore is not None:
+        kuzu_store: KuzuStore = getattr(index_file, "_kuzu_store", None)  # noqa: B018
+        if kuzu_store is not None:
+            try:
+                slug = path.stem
+                corpus = zone_of(rel)
+                summary = body_text[:400]
+                kuzu_store.upsert_page(slug, corpus, fm, summary, rel_str)
+                if corpus == "wiki":
+                    kuzu_store.upsert_edges_from_frontmatter(slug, fm)
+                else:
+                    kuzu_store.upsert_mentions_from_body(slug, body_text)
+            except Exception as exc:
+                log(f"kuzu upsert error for {rel_str}: {exc}")
 
     return action
 
@@ -414,6 +463,18 @@ def main() -> int:
     if not args.no_embed and not api_key:
         log("no OPENROUTER_API_KEY — skipping vector embeddings (FTS5 only)")
 
+    # Initialize Kuzu graph store (optional)
+    _kuzu_store = None
+    if KuzuStore is not None:
+        try:
+            vault_root = str(vault)
+            _kuzu_store = KuzuStore(get_graph_path(vault_root), read_only=False)
+            _kuzu_store.bootstrap_schema()
+            index_file._kuzu_store = _kuzu_store  # attach for index_file to use
+            log("kuzu graph store initialized")
+        except Exception as exc:
+            log(f"kuzu init failed (skipping graph): {exc}")
+
     counts = {"fresh": 0, "updated": 0, "skipped": 0}
     for path in walk_vault(vault):
         try:
@@ -424,6 +485,10 @@ def main() -> int:
 
     removed = prune_missing(conn, vault)
     conn.commit()
+
+    if _kuzu_store is not None:
+        _kuzu_store.close()
+        log("kuzu graph store closed")
 
     log(
         f"done. fresh={counts['fresh']} updated={counts['updated']} "

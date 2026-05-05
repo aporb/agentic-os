@@ -81,6 +81,13 @@ def main() -> int:
 
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
+        env_file = Path.home() / ".hermes" / ".env"
+        if env_file.exists():
+            for line in env_file.read_text().splitlines():
+                if line.startswith("OPENROUTER_API_KEY="):
+                    api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    break
+    if not api_key:
         sys.exit("[search-vec] OPENROUTER_API_KEY not set")
 
     db = sqlite3.connect(str(db_path))
