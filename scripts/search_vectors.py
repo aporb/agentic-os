@@ -44,19 +44,28 @@ def resolve_vault() -> Path:
 
 
 def embed_query(text: str, api_key: str) -> list[float]:
-    body = json.dumps({"model": EMBED_MODEL, "input": [text]}).encode("utf-8")
-    req = urllib.request.Request(
+    """Embed a query string via OpenRouter. Uses curl subprocess for reliability."""
+    import subprocess
+    body = json.dumps({"model": EMBED_MODEL, "input": [text]})
+    headers = {
+        "content-type": "application/json",
+        "authorization": f"Bearer {api_key}",
+        "HTTP-Referer": "https://github.com/aporb/agentic-os",
+        "X-Title": "Agentic OS Console",
+    }
+
+    # curl subprocess (reliable in environments where urllib SSL hangs)
+    curl_cmd = [
+        "curl", "-s", "--max-time", "45",
+        "-H", f"content-type: {headers['content-type']}",
+        "-H", f"authorization: {headers['authorization']}",
+        "-H", f"HTTP-Referer: {headers['HTTP-Referer']}",
+        "-H", f"X-Title: {headers['X-Title']}",
+        "-d", body,
         "https://openrouter.ai/api/v1/embeddings",
-        data=body,
-        headers={
-            "content-type": "application/json",
-            "authorization": f"Bearer {api_key}",
-            "HTTP-Referer": "https://github.com/aporb/agentic-os",
-            "X-Title": "Agentic OS Console",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        data = json.load(resp)
+    ]
+    result = subprocess.run(curl_cmd, capture_output=True, text=True, timeout=50)
+    data = json.loads(result.stdout)
     return data["data"][0]["embedding"]
 
 

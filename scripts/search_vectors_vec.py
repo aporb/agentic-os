@@ -51,17 +51,18 @@ def resolve_vault() -> Path:
 
 
 def embed_query(text: str, api_key: str) -> bytes:
-    body = json.dumps({"model": EMBED_MODEL, "input": [text]}).encode("utf-8")
-    req = urllib.request.Request(
+    """Embed query via OpenRouter using curl subprocess for reliability."""
+    import subprocess
+    body = json.dumps({"model": EMBED_MODEL, "input": [text]})
+    curl_cmd = [
+        "curl", "-s", "--max-time", "45",
+        "-H", "Content-Type: application/json",
+        "-H", f"Authorization: Bearer {api_key}",
+        "-d", body,
         "https://openrouter.ai/api/v1/embeddings",
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        payload = json.loads(resp.read())
+    ]
+    result = subprocess.run(curl_cmd, capture_output=True, text=True, timeout=50)
+    payload = json.loads(result.stdout)
     vec = payload["data"][0]["embedding"]
     return struct.pack(f"{len(vec)}f", *vec)
 

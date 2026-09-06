@@ -208,17 +208,44 @@ def init_db(conn: sqlite3.Connection) -> None:
 
 
 def embed_via_openrouter(texts: list[str], api_key: str) -> list[list[float]] | None:
-    """POST to OpenRouter embeddings endpoint. Returns list of vectors or None on failure."""
-    body = json.dumps({"model": EMBED_MODEL, "input": texts}).encode("utf-8")
+    """POST to OpenRouter embeddings endpoint. Returns list of vectors or None on failure.
+
+    Uses curl as a subprocess fallback because Python's urllib/request SSL handshake
+    can hang in certain environments (OpenSSL 3.x TLS negotiation issues with
+    Cloudflare-proxied endpoints like OpenRouter).
+    """
+    body = json.dumps({"model": EMBED_MODEL, "input": texts})
+    headers = {
+        "content-type": "application/json",
+        "authorization": f"Bearer {api_key}",
+        "HTTP-Referer": "https://github.com/aporb/agentic-os",
+        "X-Title": "Agentic OS Console",
+    }
+
+    # Strategy 1: curl subprocess (reliable in this environment)
+    curl_cmd = [
+        "curl", "-s", "--max-time", "45",
+        "-H", f"content-type: {headers['content-type']}",
+        "-H", f"authorization: {headers['authorization']}",
+        "-H", f"HTTP-Referer: {headers['HTTP-Referer']}",
+        "-H", f"X-Title: {headers['X-Title']}",
+        "-d", body,
+        "https://openrouter.ai/api/v1/embeddings",
+    ]
+    try:
+        import subprocess
+        result = subprocess.run(curl_cmd, capture_output=True, text=True, timeout=50)
+        if result.returncode == 0 and result.stdout:
+            data = json.loads(result.stdout)
+            return [item["embedding"] for item in data.get("data", [])]
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
+        pass
+
+    # Strategy 2: Python urllib fallback (works in environments without the SSL issue)
     req = urllib.request.Request(
         "https://openrouter.ai/api/v1/embeddings",
-        data=body,
-        headers={
-            "content-type": "application/json",
-            "authorization": f"Bearer {api_key}",
-            "HTTP-Referer": "https://github.com/aporb/agentic-os",
-            "X-Title": "Agentic OS Console",
-        },
+        data=body.encode("utf-8"),
+        headers=headers,
     )
     try:
         with urllib.request.urlopen(req, timeout=60) as resp:
